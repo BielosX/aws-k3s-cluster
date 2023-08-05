@@ -7,7 +7,7 @@ variable "init-script" {
 }
 
 variable "cloud-watch-config" {
-  type = map(string)
+  type = map(any)
 }
 
 variable "min-size" {

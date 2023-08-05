@@ -5,6 +5,9 @@ terraform {
       version = "5.11.0"
     }
   }
+  backend "s3" {
+    key = "vpc.tfstate"
+  }
 }
 
 provider "aws" {

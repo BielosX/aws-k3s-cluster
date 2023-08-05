@@ -8,24 +8,33 @@ resource "aws_security_group" "security-group" {
   }
 }
 
-data "aws_ami" "linux-2023-arm" {
-  most_recent = true
-  filter {
-    name = "architecture"
-    values = ["arm64"]
-  }
-  filter {
-    name = "description"
-    values = ["Amazon Linux 2023*"]
-  }
+locals {
+  init-script = <<-EOM
+  #!/bin/bash -xe
+  exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
+    echo "Install K3S"
+  EOM
 }
 
 module "asg" {
   source = "../asg"
-  ami = data.aws_ami.linux-2023-arm.id
+  ami = var.ami
   cloud-watch-config = {
+    logs = {
+      logs_collected = {
+        files = {
+          collect_list = [
+            {
+              file_path = "/var/log/user-data.log"
+              log_group_name = "/var/log/user-data.log"
+              log_stream_name = "{instance_id}"
+            }
+          ]
+        }
+      }
+    }
   }
-  init-script = ""
+  init-script = local.init-script
   instance-managed-policies = [
     "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
   ]

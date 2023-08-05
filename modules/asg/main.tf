@@ -20,7 +20,7 @@ locals {
   packages:
     - amazon-cloudwatch-agent
   runcmd:
-    - sudo ${local.cw-agent-dir}/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:${local.cw-agent-conf-file}
+    - ${local.cw-agent-dir}/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:${local.cw-agent-conf-file}
 
   --//
   Content-Type: text/x-shellscript; charset="us-ascii"
@@ -65,7 +65,9 @@ resource "aws_launch_template" "template" {
   instance_type = var.instance-type
   user_data = base64encode(local.user-data)
   vpc_security_group_ids = var.security-group-ids
-  iam_instance_profile = aws_iam_instance_profile.instance-profile.id
+  iam_instance_profile {
+    arn = aws_iam_instance_profile.instance-profile.arn
+  }
 }
 
 resource "aws_autoscaling_group" "asg" {
