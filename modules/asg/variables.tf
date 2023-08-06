@@ -38,3 +38,8 @@ variable "instance-policy" {
   type = string
   default = ""
 }
+
+variable "target-group-arns" {
+  type = list(string)
+  default = []
+}

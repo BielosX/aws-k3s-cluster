@@ -1,19 +1,20 @@
-resource "aws_security_group" "security-group" {
-  vpc_id = var.vpc-id
-  egress {
-    cidr_blocks = ["0.0.0.0/0"]
-    from_port = 443
-    to_port = 443
-    protocol = "tcp"
-  }
-}
-
 locals {
   init-script = <<-EOM
   #!/bin/bash -xe
   exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
     echo "Install K3S"
   EOM
+}
+
+module "security-group" {
+  source = "./security-group"
+  vpc-id = var.vpc-id
+}
+
+module "lb" {
+  source = "./lb"
+  subnet-ids = var.subnet-ids
+  vpc-id = var.vpc-id
 }
 
 module "asg" {
@@ -41,6 +42,13 @@ module "asg" {
   instance-type = "t4g.small"
   max-size = 3
   min-size = 3
-  security-group-ids = [aws_security_group.security-group.id]
+  security-group-ids = [module.security-group.control-plane-sg-id]
   subnet-ids = var.subnet-ids
+  target-group-arns = [module.lb.target-group-arn]
+}
+
+module "cloud-map" {
+  source = "./cloud-map"
+  vpc-id = var.vpc-id
+  load-balancer-dns = module.lb.dns
 }
