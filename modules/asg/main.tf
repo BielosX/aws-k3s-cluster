@@ -19,6 +19,7 @@ locals {
       content: ${local.cw-config-content}
   packages:
     - amazon-cloudwatch-agent
+    - jq
   runcmd:
     - ${local.cw-agent-dir}/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:${local.cw-agent-conf-file}
 
@@ -65,6 +66,10 @@ resource "aws_launch_template" "template" {
   instance_type = var.instance-type
   user_data = base64encode(local.user-data)
   vpc_security_group_ids = var.security-group-ids
+  metadata_options {
+    instance_metadata_tags = "enabled"
+    http_endpoint = "enabled"
+  }
   iam_instance_profile {
     arn = aws_iam_instance_profile.instance-profile.arn
   }
