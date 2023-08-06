@@ -35,6 +35,7 @@ module "asg" {
       }
     }
   }
+  instance-name = "control-plane-node"
   init-script = local.init-script
   instance-managed-policies = [
     "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"

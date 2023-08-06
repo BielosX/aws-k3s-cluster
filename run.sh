@@ -47,9 +47,21 @@ function deploy_control_plane() {
   popd || exit
 }
 
+function deploy_bastion() {
+  pushd live/bastion || exit
+  get_exports
+  get_backend_bucket "$exports"
+  get_lock_table "$exports"
+  terraform init -backend-config="bucket=$backend_bucket_name" \
+    -backend-config="dynamodb_table=$lock_table_name" || exit
+  terraform apply -auto-approve -var "vpc-state-bucket=$backend_bucket_name" || exit
+  popd || exit
+}
+
 function deploy() {
   deploy_backend
   deploy_vpc
+  deploy_bastion
   deploy_control_plane
 }
 
@@ -61,6 +73,14 @@ function destroy_vpc() {
 
 function destroy_control_plane() {
   pushd live/control-plane || exit
+  get_exports
+  get_backend_bucket "$exports"
+  terraform destroy -auto-approve -var "vpc-state-bucket=$backend_bucket_name" || exit
+  popd || exit
+}
+
+function destroy_bastion() {
+  pushd live/bastion || exit
   get_exports
   get_backend_bucket "$exports"
   terraform destroy -auto-approve -var "vpc-state-bucket=$backend_bucket_name" || exit
@@ -91,6 +111,7 @@ function destroy_backend() {
 
 function destroy() {
   destroy_control_plane
+  destroy_bastion
   destroy_vpc
   destroy_backend
 }

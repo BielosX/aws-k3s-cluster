@@ -43,3 +43,8 @@ variable "target-group-arns" {
   type = list(string)
   default = []
 }
+
+variable "instance-name" {
+  type = string
+  default = ""
+}

@@ -75,6 +75,14 @@ resource "aws_autoscaling_group" "asg" {
   min_size = var.max-size
   vpc_zone_identifier = var.subnet-ids
   target_group_arns = var.target-group-arns
+  dynamic "tag" {
+    for_each = var.instance-name == "" ? [] : [1]
+    content {
+      key = "Name"
+      value = var.instance-name
+      propagate_at_launch = true
+    }
+  }
   launch_template {
     id = aws_launch_template.template.id
     version = aws_launch_template.template.latest_version
