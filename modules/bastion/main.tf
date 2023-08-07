@@ -22,6 +22,10 @@ data "aws_iam_policy_document" "assume-role-policy" {
   }
 }
 
+data "aws_vpc" "vpc" {
+  id = var.vpc-id
+}
+
 resource "aws_iam_role" "role" {
   assume_role_policy = data.aws_iam_policy_document.assume-role-policy.json
   managed_policy_arns = ["arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"]
@@ -39,6 +43,12 @@ resource "aws_security_group" "security-group" {
     to_port = 443
     protocol = "tcp"
   }
+  egress {
+    cidr_blocks = [data.aws_vpc.vpc.cidr_block]
+    from_port = 6443
+    to_port = 6443
+    protocol = "tcp"
+  }
 }
 
 resource "aws_instance" "bastion-host" {
@@ -51,7 +61,16 @@ resource "aws_instance" "bastion-host" {
   #!/bin/bash
   yum update
   yum -y install dnsutils
-  yum install -y https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_arm64/amazon-ssm-agent.rpm
+  cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
+  [kubernetes]
+  name=Kubernetes
+  baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-\$basearch
+  enabled=1
+  gpgcheck=1
+  gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+  EOF
+  yum -y install kubectl
+  yum -y install https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_arm64/amazon-ssm-agent.rpm
   systemctl enable amazon-ssm-agent
   systemctl start amazon-ssm-agent
   EOT

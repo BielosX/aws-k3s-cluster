@@ -27,14 +27,33 @@ resource "aws_dynamodb_table" "lock-table" {
 
 data "aws_iam_policy_document" "instance-role-policy" {
   statement {
+    sid = "ManageLock"
     effect = "Allow"
     actions = ["dynamodb:PutItem", "dynamodb:DeleteItem"]
     resources = [aws_dynamodb_table.lock-table.arn]
   }
   statement {
+    sid = "RegisterInstance"
     effect = "Allow"
     actions = ["servicediscovery:RegisterInstance"]
     resources = [module.cloud-map.control-plane-nodes-service-arn]
+  }
+  statement {
+    sid = "ListInstances"
+    effect = "Allow"
+    actions = ["servicediscovery:ListInstances"]
+    resources = ["*"]
+  }
+  statement {
+    sid = "ManageSSMParams"
+    effect = "Allow"
+    actions = [
+      "ssm:DeleteParameter",
+      "ssm:GetParameter",
+      "ssm:GetParameters",
+      "ssm:PutParameter"
+    ]
+    resources = ["*"]
   }
 }
 
@@ -48,7 +67,7 @@ module "asg" {
           collect_list = [
             {
               file_path = "/var/log/user-data.log"
-              log_group_name = "/var/log/user-data.log"
+              log_group_name = "/control-plane/var/log/user-data.log"
               log_stream_name = "{instance_id}"
             }
           ]

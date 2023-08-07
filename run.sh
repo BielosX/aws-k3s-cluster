@@ -114,6 +114,8 @@ function destroy() {
   destroy_bastion
   destroy_vpc
   destroy_backend
+  aws ssm delete-parameters --names "/control-plane/token"
+  aws ssm delete-parameters --names "/control-plane/kubeconfig"
 }
 
 case "$1" in
