@@ -38,7 +38,10 @@ function create_server_node() {
     aws ssm put-parameter --name "/control-plane/token" \
       --value "$token" \
       --type "SecureString"
-    kubeconfig=$(cat /etc/rancher/k3s/k3s.yaml)
+    tmp_file=$(mktemp)
+    sed 's/127.0.0.1/lb.plane.local/g' /etc/rancher/k3s/k3s.yaml > "$tmp_file"
+    kubeconfig=$(cat "$tmp_file")
+    rm "$tmp_file"
     aws ssm put-parameter --name "/control-plane/kubeconfig" \
       --value "$kubeconfig" \
       --type "SecureString"
