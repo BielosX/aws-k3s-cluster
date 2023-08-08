@@ -33,7 +33,7 @@ function create_server_node() {
   length=$(jq -r '.Parameters | length' <<< "$parameters")
   if [ "$length" -eq 0 ]; then
     echo "Token not fount, starting as first node"
-    curl -sfL https://get.k3s.io | sh -s - server --cluster-init
+    curl -sfL https://get.k3s.io | sh -s - server --cluster-init --tls-san "lb.plane.local"
     token=$(cat /var/lib/rancher/k3s/server/node-token)
     aws ssm put-parameter --name "/control-plane/token" \
       --value "$token" \
@@ -54,7 +54,9 @@ function create_server_node() {
     token=$(aws ssm get-parameter --name "/control-plane/token" --with-decryption |
       jq -r '.Parameter.Value')
     echo "Connecting to server $server_ip"
-    curl -sfL https://get.k3s.io | K3S_TOKEN="$token" sh -s - server --server "https://$server_ip:6443"
+    curl -sfL https://get.k3s.io | K3S_TOKEN="$token" sh -s - server \
+      --server "https://$server_ip:6443" \
+      --tls-san "lb.plane.local"
     journalctl -xeu k3s.service
   fi
 }
