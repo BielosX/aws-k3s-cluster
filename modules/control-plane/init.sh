@@ -28,12 +28,15 @@ function release_lock() {
 }
 
 function create_server_node() {
+  instance_id="$1"
+  node_label="aws/instance-id=$instance_id"
   parameters=$(aws ssm get-parameters --names "/control-plane/token" \
     --with-decryption)
   length=$(jq -r '.Parameters | length' <<< "$parameters")
   if [ "$length" -eq 0 ]; then
     echo "Token not fount, starting as first node"
-    curl -sfL https://get.k3s.io | sh -s - server --cluster-init --tls-san "lb.plane.local"
+    curl -sfL https://get.k3s.io | sh -s - server \
+      --cluster-init --tls-san "lb.plane.local" --node-label "$node_label"
     token=$(cat /var/lib/rancher/k3s/server/node-token)
     aws ssm put-parameter --name "/control-plane/token" \
       --value "$token" \
@@ -56,7 +59,8 @@ function create_server_node() {
     echo "Connecting to server $server_ip"
     curl -sfL https://get.k3s.io | K3S_TOKEN="$token" sh -s - server \
       --server "https://$server_ip:6443" \
-      --tls-san "lb.plane.local"
+      --tls-san "lb.plane.local" \
+      --node-label "$node_label"
     journalctl -xeu k3s.service
   fi
 }
@@ -71,7 +75,7 @@ exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
   INSTANCE_ID=$(jq -r '.instanceId' <<< "$INSTANCE_IDENTITY")
   PRIVATE_IP=$(jq -r '.privateIp' <<< "$INSTANCE_IDENTITY")
   acquire_lock
-  create_server_node
+  create_server_node "$INSTANCE_ID"
   aws servicediscovery register-instance \
     --service-id "$SERVICE_ID" \
     --instance-id "$INSTANCE_ID" \
