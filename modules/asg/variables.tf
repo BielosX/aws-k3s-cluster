@@ -48,3 +48,27 @@ variable "instance-name" {
   type = string
   default = ""
 }
+
+variable "instance-metadata-tags" {
+  type = bool
+  default = true
+}
+
+variable "metadata-http-endpoint" {
+  type = bool
+  default = true
+}
+
+variable "metadata-http-tokens" {
+  type = string
+  default = "required"
+  validation {
+    condition = contains(["required", "optional"], var.metadata-http-tokens)
+    error_message = "metadata-http-tokens should be either 'required' or 'optional'"
+  }
+}
+
+variable "metadata-hop-limit" {
+  type = number
+  default = 1
+}

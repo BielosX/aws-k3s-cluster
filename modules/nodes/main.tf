@@ -63,4 +63,5 @@ module "asg" {
   security-group-ids = [aws_security_group.security-group.id]
   subnet-ids = var.subnet-ids
   instance-name = "node"
+  metadata-hop-limit = 1
 }

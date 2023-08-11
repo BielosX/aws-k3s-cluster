@@ -67,8 +67,10 @@ resource "aws_launch_template" "template" {
   user_data = base64encode(local.user-data)
   vpc_security_group_ids = var.security-group-ids
   metadata_options {
-    instance_metadata_tags = "enabled"
-    http_endpoint = "enabled"
+    instance_metadata_tags = var.instance-metadata-tags ? "enabled" : "disabled"
+    http_endpoint = var.metadata-http-endpoint ? "enabled" : "disabled"
+    http_tokens = var.metadata-http-tokens
+    http_put_response_hop_limit = var.metadata-hop-limit
   }
   iam_instance_profile {
     arn = aws_iam_instance_profile.instance-profile.arn

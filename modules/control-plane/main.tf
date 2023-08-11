@@ -7,6 +7,7 @@ module "lb" {
   source = "./lb"
   subnet-ids = var.subnet-ids
   vpc-id = var.vpc-id
+  security-group-ids = [module.security-group.load-balancer-sg-id]
 }
 
 module "cloud-map" {
@@ -90,4 +91,5 @@ module "asg" {
   security-group-ids = [module.security-group.control-plane-sg-id]
   subnet-ids = var.subnet-ids
   target-group-arns = [module.lb.target-group-arn]
+  metadata-hop-limit = 2
 }

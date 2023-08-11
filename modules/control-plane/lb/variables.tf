@@ -5,3 +5,7 @@ variable "subnet-ids" {
 variable "vpc-id" {
   type = string
 }
+
+variable "security-group-ids" {
+  type = list(string)
+}

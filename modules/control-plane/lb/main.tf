@@ -6,6 +6,7 @@ resource "aws_lb" "control-plane-lb" {
   internal = true
   load_balancer_type = "network"
   subnets = var.subnet-ids
+  security_groups = var.security-group-ids
 }
 
 resource "aws_lb_listener" "control-plane-lb" {
