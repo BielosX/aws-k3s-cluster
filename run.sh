@@ -65,7 +65,8 @@ function deploy_nodes() {
   get_lock_table "$exports"
   terraform init -backend-config="bucket=$backend_bucket_name" \
     -backend-config="dynamodb_table=$lock_table_name" || exit
-  terraform apply -auto-approve -var "vpc-state-bucket=$backend_bucket_name" || exit
+  terraform apply -auto-approve -var "vpc-state-bucket=$backend_bucket_name" \
+    -var "control-plane-state-bucket=$backend_bucket_name" || exit
   popd || exit
 }
 
@@ -119,7 +120,9 @@ function destroy_nodes() {
   pushd live/nodes || exit
   get_exports
   get_backend_bucket "$exports"
-  terraform destroy -auto-approve -var "vpc-state-bucket=$backend_bucket_name" || exit
+  terraform destroy -auto-approve \
+    -var "vpc-state-bucket=$backend_bucket_name" \
+    -var "control-plane-state-bucket=$backend_bucket_name"|| exit
   popd || exit
 }
 

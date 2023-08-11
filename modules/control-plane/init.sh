@@ -61,7 +61,6 @@ function create_server_node() {
       --server "https://$server_ip:6443" \
       --tls-san "lb.plane.local" \
       --node-label "$node_label"
-    journalctl -xeu k3s.service
   fi
 }
 

@@ -7,6 +7,7 @@ resource "aws_lb" "control-plane-lb" {
   load_balancer_type = "network"
   subnets = var.subnet-ids
   security_groups = var.security-group-ids
+  enable_cross_zone_load_balancing = true
 }
 
 resource "aws_lb_listener" "control-plane-lb" {

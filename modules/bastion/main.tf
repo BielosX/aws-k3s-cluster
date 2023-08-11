@@ -37,6 +37,7 @@ resource "aws_iam_instance_profile" "instance-profile" {
 
 resource "aws_security_group" "security-group" {
   vpc_id = var.vpc-id
+  name_prefix = "bastion-host-sg"
   egress {
     cidr_blocks = ["0.0.0.0/0"]
     from_port = 443
@@ -48,6 +49,9 @@ resource "aws_security_group" "security-group" {
     from_port = 6443
     to_port = 6443
     protocol = "tcp"
+  }
+  lifecycle {
+    create_before_destroy = true
   }
 }
 

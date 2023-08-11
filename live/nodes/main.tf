@@ -23,9 +23,19 @@ data "terraform_remote_state" "vpc" {
   }
 }
 
+data "terraform_remote_state" "control-plane" {
+  backend = "s3"
+  config = {
+    key = "control-plane.tfstate"
+    dynamodb_table = "terraform-state-lock"
+    bucket = var.control-plane-state-bucket
+  }
+}
+
 module "nodes" {
   source = "../../modules/nodes"
   ami = "ami-0bd2107e291d3cac5"
   subnet-ids = data.terraform_remote_state.vpc.outputs.private-subnet-ids
   vpc-id = data.terraform_remote_state.vpc.outputs.vpc-id
+  kubernetes-node-sg-id = data.terraform_remote_state.control-plane.outputs.node-sg-id
 }

@@ -9,3 +9,7 @@ variable "subnet-ids" {
 variable "ami" {
   type = string
 }
+
+variable "kubernetes-node-sg-id" {
+  type = string
+}
