@@ -30,13 +30,15 @@ function release_lock() {
 function create_server_node() {
   instance_id="$1"
   node_label="aws/instance-id=$instance_id"
+  taint="node-role.kubernetes.io/control-plane:NoSchedule"
   parameters=$(aws ssm get-parameters --names "/control-plane/token" \
     --with-decryption)
   length=$(jq -r '.Parameters | length' <<< "$parameters")
   if [ "$length" -eq 0 ]; then
     echo "Token not fount, starting as first node"
     curl -sfL https://get.k3s.io | sh -s - server \
-      --cluster-init --tls-san "lb.plane.local" --node-label "$node_label"
+      --cluster-init --tls-san "lb.plane.local" \
+      --node-label "$node_label" --node-taint "$taint"
     token=$(cat /var/lib/rancher/k3s/server/node-token)
     aws ssm put-parameter --name "/control-plane/token" \
       --value "$token" \
@@ -60,7 +62,8 @@ function create_server_node() {
     curl -sfL https://get.k3s.io | K3S_TOKEN="$token" sh -s - server \
       --server "https://$server_ip:6443" \
       --tls-san "lb.plane.local" \
-      --node-label "$node_label"
+      --node-label "$node_label" \
+      --node-taint "$taint"
   fi
 }
 
