@@ -3,17 +3,9 @@ module "security-group" {
   vpc-id = var.vpc-id
 }
 
-module "lb" {
-  source = "./lb"
-  subnet-ids = var.subnet-ids
-  vpc-id = var.vpc-id
-  security-group-ids = [module.security-group.load-balancer-sg-id]
-}
-
 module "cloud-map" {
   source = "./cloud-map"
   vpc-id = var.vpc-id
-  load-balancer-dns = module.lb.dns
 }
 
 resource "aws_dynamodb_table" "lock-table" {
@@ -80,6 +72,8 @@ module "asg" {
   init-script = templatefile("${path.module}/init.sh", {
     lock_table = aws_dynamodb_table.lock-table.name
     service_id = module.cloud-map.control-plane-nodes-service-id
+    kubernetes_pod_cidr = var.kubernetes-pod-cidr
+    kubernetes_service_cidr = var.kubernetes-service-cidr
   })
   instance-managed-policies = [
     "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
@@ -90,6 +84,5 @@ module "asg" {
   min-size = 3
   security-group-ids = [module.security-group.control-plane-sg-id]
   subnet-ids = var.subnet-ids
-  target-group-arns = [module.lb.target-group-arn]
   metadata-hop-limit = 2
 }

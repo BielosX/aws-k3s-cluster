@@ -11,6 +11,6 @@ exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
   token=$(aws ssm get-parameter --name "/control-plane/token" --with-decryption |
     jq -r '.Parameter.Value')
   curl -sfL https://get.k3s.io | K3S_TOKEN="$token" sh -s - agent \
-    --server https://lb.plane.local:6443 \
+    --server https://nodes.plane.local:6443 \
     --node-label "aws/instance-id=$INSTANCE_ID"
   echo "Agent initiated"

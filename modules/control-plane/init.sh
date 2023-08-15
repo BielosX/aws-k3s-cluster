@@ -1,6 +1,8 @@
 #!/bin/bash
 LOCK_TABLE="${lock_table}"
 SERVICE_ID="${service_id}"
+POD_CIDR="${kubernetes_pod_cidr}"
+SERVICE_CIDR="${kubernetes_service_cidr}"
 
 function acquire_lock() {
   echo "Trying to acquire lock"
@@ -31,20 +33,22 @@ function create_server_node() {
   instance_id="$1"
   node_label="aws/instance-id=$instance_id"
   taint="node-role.kubernetes.io/control-plane:NoSchedule"
+  domain="nodes.plane.local"
   parameters=$(aws ssm get-parameters --names "/control-plane/token" \
     --with-decryption)
   length=$(jq -r '.Parameters | length' <<< "$parameters")
   if [ "$length" -eq 0 ]; then
     echo "Token not fount, starting as first node"
     curl -sfL https://get.k3s.io | sh -s - server \
-      --cluster-init --tls-san "lb.plane.local" \
-      --node-label "$node_label" --node-taint "$taint"
+      --cluster-init --tls-san "$domain" \
+      --node-label "$node_label" --node-taint "$taint" \
+      --cluster-cidr "$POD_CIDR" --service-cidr "$SERVICE_CIDR"
     token=$(cat /var/lib/rancher/k3s/server/node-token)
     aws ssm put-parameter --name "/control-plane/token" \
       --value "$token" \
       --type "SecureString"
     tmp_file=$(mktemp)
-    sed 's/127.0.0.1/lb.plane.local/g' /etc/rancher/k3s/k3s.yaml > "$tmp_file"
+    sed 's/127.0.0.1/nodes.plane.local/g' /etc/rancher/k3s/k3s.yaml > "$tmp_file"
     kubeconfig=$(cat "$tmp_file")
     rm "$tmp_file"
     aws ssm put-parameter --name "/control-plane/kubeconfig" \
@@ -61,9 +65,10 @@ function create_server_node() {
     echo "Connecting to server $server_ip"
     curl -sfL https://get.k3s.io | K3S_TOKEN="$token" sh -s - server \
       --server "https://$server_ip:6443" \
-      --tls-san "lb.plane.local" \
+      --tls-san "$domain" \
       --node-label "$node_label" \
-      --node-taint "$taint"
+      --node-taint "$taint" \
+      --cluster-cidr "$POD_CIDR" --service-cidr "$SERVICE_CIDR"
   fi
 }
 

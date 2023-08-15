@@ -28,4 +28,6 @@ module "control-plane" {
   subnet-ids = data.terraform_remote_state.vpc.outputs.private-subnet-ids
   vpc-id = data.terraform_remote_state.vpc.outputs.vpc-id
   ami = "ami-0bd2107e291d3cac5"
+  kubernetes-pod-cidr = "172.16.0.0/16"
+  kubernetes-service-cidr = "172.17.0.0/16"
 }
