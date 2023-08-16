@@ -19,3 +19,7 @@ variable "kubernetes-service-cidr" {
   type = string
   default = "10.43.0.0/16"
 }
+
+variable "management-lambda-file-path" {
+  type = string
+}

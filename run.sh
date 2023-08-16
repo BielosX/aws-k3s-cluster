@@ -37,13 +37,20 @@ function deploy_vpc() {
 }
 
 function deploy_control_plane() {
+  pushd node-management-lambda || exit
+  ./gradlew clean build shadow spotlessJavaCheck
+  jar_path=$(readlink -f build/libs/node-management-lambda-all.jar)
+  echo "lambda jar path: $jar_path"
+  popd || exit
   pushd live/control-plane || exit
   get_exports
   get_backend_bucket "$exports"
   get_lock_table "$exports"
   terraform init -backend-config="bucket=$backend_bucket_name" \
     -backend-config="dynamodb_table=$lock_table_name" || exit
-  terraform apply -auto-approve -var "vpc-state-bucket=$backend_bucket_name" || exit
+  terraform apply -auto-approve \
+    -var "vpc-state-bucket=$backend_bucket_name" \
+    -var "management-lambda-file-path=$jar_path"|| exit
   popd || exit
 }
 
@@ -104,7 +111,11 @@ function destroy_control_plane() {
   pushd live/control-plane || exit
   get_exports
   get_backend_bucket "$exports"
-  terraform destroy -auto-approve -var "vpc-state-bucket=$backend_bucket_name" || exit
+  temp=$(mktemp)
+  terraform destroy -auto-approve \
+    -var "vpc-state-bucket=$backend_bucket_name" \
+    -var "management-lambda-file-path=$temp" || exit
+  rm "$temp"
   popd || exit
 }
 
