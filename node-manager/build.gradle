@@ -1,8 +1,9 @@
 plugins {
     id 'java'
-    id 'com.github.johnrengelman.shadow' version '8.1.1'
+    id 'application'
     id 'io.freefair.lombok' version "8.1.0"
     id "com.diffplug.spotless" version "6.20.0"
+    id 'com.bmuschko.docker-java-application' version '9.3.2'
 }
 
 group = 'org.example'
@@ -17,6 +18,10 @@ java {
     }
 }
 
+application {
+    mainClass = 'Main'
+}
+
 spotless {
     java {
         importOrder()
@@ -28,12 +33,22 @@ spotless {
     }
 }
 
+def imageTag = System.getProperty("imageTag")
+def tag = imageTag == null ? "latest" : imageTag
+
+docker {
+    javaApplication {
+        baseImage = 'arm64v8/amazoncorretto:17-alpine'
+        maintainer = 'Mateusz Biel "matbiel@gmail.com"'
+        images = ["node-manager:${tag}"]
+        mainClassName = 'Main'
+    }
+}
+
 dependencies {
     testImplementation platform('org.junit:junit-bom:5.9.1')
     testImplementation 'org.junit.jupiter:junit-jupiter'
     implementation 'io.kubernetes:client-java:18.0.1'
-    implementation 'com.amazonaws:aws-lambda-java-core:1.2.2'
-    implementation 'com.amazonaws:aws-lambda-java-events:3.11.2'
     implementation 'org.slf4j:slf4j-api:2.0.7'
     implementation 'org.slf4j:slf4j-reload4j:2.0.7'
     implementation 'ch.qos.reload4j:reload4j:1.2.25'

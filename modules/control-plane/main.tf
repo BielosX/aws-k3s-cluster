@@ -86,12 +86,3 @@ module "asg" {
   subnet-ids = var.subnet-ids
   metadata-hop-limit = 2
 }
-
-module "node-management-lambda" {
-  source = "./node-management-lambda"
-  control-plane-service-id = module.cloud-map.control-plane-nodes-service-id
-  file-path = var.management-lambda-file-path
-  security-group-id = module.security-group.management-lambda-sg-id
-  subnet-ids = var.subnet-ids
-  vpc-id = var.vpc-id
-}
