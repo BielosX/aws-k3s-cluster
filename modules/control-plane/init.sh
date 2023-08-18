@@ -3,6 +3,7 @@ LOCK_TABLE="${lock_table}"
 SERVICE_ID="${service_id}"
 POD_CIDR="${kubernetes_pod_cidr}"
 SERVICE_CIDR="${kubernetes_service_cidr}"
+NODE_MANAGER_IMAGE="${node_manager_image}"
 
 function configure_ecr() {
   accountId="$1"
@@ -25,6 +26,25 @@ configs:
       insecure_skip_verify: true
 EOF
 
+}
+
+function setup_node_manager_pod() {
+  mkdir -p /var/lib/rancher/k3s/agent/pod-manifests/
+cat <<EOF > /var/lib/rancher/k3s/agent/pod-manifests/node-manager.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: node-manager
+spec:
+  containers:
+    - name: node-manager
+      image: "$NODE_MANAGER_IMAGE"
+      env:
+        - name: "SERVICE_ID"
+          value: "$SERVICE_ID"
+        - name: "LOCK_TABLE"
+          value: "$LOCK_TABLE"
+EOF
 }
 
 function acquire_lock() {
@@ -107,6 +127,7 @@ exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
   ACCOUNT_ID=$(jq -r '.accountId' <<< "$INSTANCE_IDENTITY")
   REGION=$(jq -r '.region' <<< "$INSTANCE_IDENTITY")
   configure_ecr "$ACCOUNT_ID" "$REGION"
+  setup_node_manager_pod
   acquire_lock
   create_server_node "$INSTANCE_ID"
   aws servicediscovery register-instance \

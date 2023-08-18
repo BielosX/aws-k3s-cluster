@@ -63,15 +63,24 @@ function deploy_node_manager() {
   docker push "$new_tag"
 }
 
+function get_latest_node_manager() {
+  account_id=$(aws sts get-caller-identity | jq -r '.Account')
+  latest_tag=$(aws ecr list-images --repository-name "node-manager" \
+    | jq -r '.imageIds | map(.imageTag | tonumber) | max')
+  latest_node_manager="${account_id}.dkr.ecr.${AWS_REGION}.amazonaws.com/node-manager:${latest_tag}"
+}
+
 function deploy_control_plane() {
   pushd live/control-plane || exit
   get_exports
   get_backend_bucket "$exports"
   get_lock_table "$exports"
+  get_latest_node_manager
+  echo "Latest node-manager: $latest_node_manager"
   terraform init -backend-config="bucket=$backend_bucket_name" \
     -backend-config="dynamodb_table=$lock_table_name" || exit
   terraform apply -auto-approve \
-    -var "vpc-state-bucket=$backend_bucket_name" || exit
+    -var "vpc-state-bucket=$backend_bucket_name" -var "node-manager-image=$latest_node_manager" || exit
   popd || exit
 }
 
@@ -141,7 +150,7 @@ function destroy_control_plane() {
   get_exports
   get_backend_bucket "$exports"
   terraform destroy -auto-approve \
-    -var "vpc-state-bucket=$backend_bucket_name" || exit
+    -var "vpc-state-bucket=$backend_bucket_name" -var "node-manager-image=temp" || exit
   popd || exit
 }
 

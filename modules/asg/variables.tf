@@ -81,3 +81,12 @@ variable "write-files" {
   }))
   default = []
 }
+
+variable "string-write-files" {
+  type = list(object({
+    destination = string
+    permissions = string
+    content = string
+  }))
+  default = []
+}

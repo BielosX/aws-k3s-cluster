@@ -13,6 +13,20 @@ resource "aws_security_group" "security-group" {
   }
 }
 
+resource "aws_dynamodb_table" "lock-table" {
+  name = "node-lock"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key = "lockID"
+  attribute {
+    name = "lockID"
+    type = "S"
+  }
+  ttl {
+    enabled = true
+    attribute_name = "expirationTime"
+  }
+}
+
 data "aws_iam_policy_document" "policy" {
   statement {
     effect = "Allow"
@@ -52,4 +66,14 @@ module "asg" {
   subnet-ids = var.subnet-ids
   instance-name = "node"
   metadata-hop-limit = 1
+  string-write-files = [
+    {
+      permissions = "777"
+      destination = "/etc/cron.hourly/refresh-ecr-token.sh"
+      content = templatefile("${path.module}/../refresh-ecr-token.sh", {
+        lock_table = aws_dynamodb_table.lock-table.name
+        lock_table_key = "node-ecr-token-refresh"
+      })
+    }
+  ]
 }

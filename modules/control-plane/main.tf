@@ -78,6 +78,7 @@ module "asg" {
     service_id = module.cloud-map.control-plane-nodes-service-id
     kubernetes_pod_cidr = var.kubernetes-pod-cidr
     kubernetes_service_cidr = var.kubernetes-service-cidr
+    node_manager_image = var.node-manager-image
   })
   instance-managed-policies = [
     "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy",
@@ -91,4 +92,14 @@ module "asg" {
   security-group-ids = [module.security-group.control-plane-sg-id]
   subnet-ids = var.subnet-ids
   metadata-hop-limit = 2
+  string-write-files = [
+    {
+      permissions = "777"
+      destination = "/etc/cron.hourly/refresh-ecr-token.sh"
+      content = templatefile("${path.module}/../refresh-ecr-token.sh", {
+        lock_table = aws_dynamodb_table.lock-table.name
+        lock_table_key = "control-plane-ecr-token-refresh"
+      })
+    }
+  ]
 }

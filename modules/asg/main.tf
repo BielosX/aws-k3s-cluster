@@ -2,12 +2,14 @@ locals {
   cw-config-content = base64encode(jsonencode(var.cloud-watch-config))
   cw-agent-dir = "/opt/aws/amazon-cloudwatch-agent"
   cw-agent-conf-file = "${local.cw-agent-dir}/etc/amazon-cloudwatch-agent.json"
+  base64-files = [for e in var.write-files: {path=e.destination, permissions=e.permissions, content=filebase64(e.contentFile)}]
+  base64-strings = [for e in var.string-write-files: {path=e.destination, permissions=e.permissions, content=base64encode(e.content)}]
   user-data = templatefile("${path.module}/user_data.tmpl", {
     cw-agent-conf-file = local.cw-agent-conf-file
     cw-config-content = local.cw-config-content
     cw-agent-dir = local.cw-agent-dir
     init-script = var.init-script
-    files = [for e in var.write-files: {path=e.destination, permissions=e.permissions, content=filebase64(e.contentFile)}]
+    files = concat(local.base64-files, local.base64-strings)
   })
 }
 
