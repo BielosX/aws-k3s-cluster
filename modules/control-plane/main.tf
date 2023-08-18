@@ -16,6 +16,10 @@ resource "aws_dynamodb_table" "lock-table" {
     name = "lockID"
     type = "S"
   }
+  ttl {
+    enabled = true
+    attribute_name = "expirationTime"
+  }
 }
 
 data "aws_iam_policy_document" "instance-role-policy" {

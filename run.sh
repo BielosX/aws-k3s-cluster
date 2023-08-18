@@ -36,6 +36,33 @@ function deploy_vpc() {
   popd || exit
 }
 
+function deploy_ecr() {
+  pushd live/ecr || exit
+  get_exports
+  get_backend_bucket "$exports"
+  get_lock_table "$exports"
+  terraform init -backend-config="bucket=$backend_bucket_name" \
+    -backend-config="dynamodb_table=$lock_table_name" || exit
+  terraform apply -auto-approve || exit
+  popd || exit
+}
+
+function deploy_node_manager() {
+  tag=$(date +%s)
+  pushd node-manager || exit
+  ./gradlew clean build spotlessJavaCheck dockerBuildImage -DimageTag="$tag" || exit
+  popd || exit
+  pushd live/ecr || exit
+  node_manager_repository_url=$(terraform output -raw "node-manager-repository-url")
+  popd || exit
+  account_id=$(aws sts get-caller-identity | jq -r '.Account')
+  aws ecr get-login-password \
+    | docker login --username AWS --password-stdin "${account_id}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+  new_tag="${node_manager_repository_url}:${tag}"
+  docker tag "node-manager:${tag}" "$new_tag"
+  docker push "$new_tag"
+}
+
 function deploy_control_plane() {
   pushd live/control-plane || exit
   get_exports
@@ -88,6 +115,8 @@ function wait_for_control_plane() {
 
 function deploy() {
   deploy_backend
+  deploy_ecr
+  deploy_node_manager
   deploy_vpc
   deploy_bastion
   deploy_control_plane
@@ -97,6 +126,12 @@ function deploy() {
 
 function destroy_vpc() {
   pushd live/vpc || exit
+  terraform destroy -auto-approve || exit
+  popd || exit
+}
+
+function destroy_ecr() {
+  pushd live/ecr || exit
   terraform destroy -auto-approve || exit
   popd || exit
 }
@@ -155,6 +190,7 @@ function destroy() {
   destroy_control_plane
   destroy_bastion
   destroy_vpc
+  destroy_ecr
   destroy_backend
   aws ssm delete-parameters --names "/control-plane/token"
   aws ssm delete-parameters --names "/control-plane/kubeconfig"
