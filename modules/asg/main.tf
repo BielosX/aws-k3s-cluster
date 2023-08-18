@@ -2,36 +2,13 @@ locals {
   cw-config-content = base64encode(jsonencode(var.cloud-watch-config))
   cw-agent-dir = "/opt/aws/amazon-cloudwatch-agent"
   cw-agent-conf-file = "${local.cw-agent-dir}/etc/amazon-cloudwatch-agent.json"
-  user-data = <<-EOT
-  Content-Type: multipart/mixed; boundary="//"
-  MIME-Version: 1.0
-
-  --//
-  Content-Type: text/cloud-config; charset="us-ascii"
-  MIME-Version: 1.0
-  Content-Transfer-Encoding: 7bit
-  Content-Disposition: attachment; filename="cloud-config.txt"
-
-  write_files:
-    - encoding: b64
-      path: ${local.cw-agent-conf-file}
-      permissions: 444
-      content: ${local.cw-config-content}
-  packages:
-    - amazon-cloudwatch-agent
-    - jq
-  runcmd:
-    - ${local.cw-agent-dir}/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:${local.cw-agent-conf-file}
-
-  --//
-  Content-Type: text/x-shellscript; charset="us-ascii"
-  MIME-Version: 1.0
-  Content-Transfer-Encoding: 7bit
-  Content-Disposition: attachment; filename="userdata.txt"
-
-  ${var.init-script}
-  --//--
-  EOT
+  user-data = templatefile("${path.module}/user_data.tmpl", {
+    cw-agent-conf-file = local.cw-agent-conf-file
+    cw-config-content = local.cw-config-content
+    cw-agent-dir = local.cw-agent-dir
+    init-script = var.init-script
+    files = [for e in var.write-files: {path=e.destination, permissions=e.permissions, content=filebase64(e.contentFile)}]
+  })
 }
 
 data "aws_iam_policy_document" "instance-assume-role" {

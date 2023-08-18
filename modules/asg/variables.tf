@@ -72,3 +72,12 @@ variable "metadata-hop-limit" {
   type = number
   default = 1
 }
+
+variable "write-files" {
+  type = list(object({
+    destination = string
+    permissions = string
+    contentFile = string
+  }))
+  default = []
+}

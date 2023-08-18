@@ -1,0 +1,37 @@
+Content-Type: multipart/mixed; boundary="//"
+MIME-Version: 1.0
+
+--//
+Content-Type: text/cloud-config; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Content-Disposition: attachment; filename="cloud-config.txt"
+
+write_files:
+    - encoding: b64
+      path: ${cw-agent-conf-file}
+      permissions: 444
+      content: ${cw-config-content}
+%{ for entry in files ~}
+    - encoding: b64
+      path: ${entry.path}
+      permissions: ${entry.permissions}
+      content: ${entry.content}
+%{ endfor ~}
+packages:
+    - amazon-cloudwatch-agent
+    - jq
+    - cronie
+runcmd:
+    - ${cw-agent-dir}/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:${cw-agent-conf-file}
+    - systemctl enable cronie.service
+    - systemctl start cronie.service
+
+--//
+Content-Type: text/x-shellscript; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Content-Disposition: attachment; filename="userdata.txt"
+
+${init-script}
+--//--
