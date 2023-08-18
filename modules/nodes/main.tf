@@ -40,7 +40,10 @@ module "asg" {
     }
   }
   init-script = file("${path.module}/init.sh")
-  instance-managed-policies = ["arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"]
+  instance-managed-policies = [
+    "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy",
+    "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+  ]
   instance-type = "t4g.small"
   instance-policy = data.aws_iam_policy_document.policy.json
   max-size = 3

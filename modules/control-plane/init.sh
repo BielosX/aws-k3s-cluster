@@ -4,6 +4,29 @@ SERVICE_ID="${service_id}"
 POD_CIDR="${kubernetes_pod_cidr}"
 SERVICE_CIDR="${kubernetes_service_cidr}"
 
+function configure_ecr() {
+  accountId="$1"
+  region="$2"
+  registry="$accountId.dkr.ecr.$region.amazonaws.com"
+  echo "Adding image registry $registry"
+  token=$(aws ecr get-login-password)
+  mkdir -p /etc/rancher/k3s
+cat <<EOF > /etc/rancher/k3s/registries.yaml
+mirrors:
+  ecr:
+    endpoint:
+      - "https://$registry"
+configs:
+  "$registry":
+    auth:
+      username: AWS
+      password: $token
+    tls:
+      insecure_skip_verify: true
+EOF
+
+}
+
 function acquire_lock() {
   echo "Trying to acquire lock"
   exit_code=255
@@ -81,6 +104,9 @@ exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
   INSTANCE_IDENTITY=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -v "$URL")
   INSTANCE_ID=$(jq -r '.instanceId' <<< "$INSTANCE_IDENTITY")
   PRIVATE_IP=$(jq -r '.privateIp' <<< "$INSTANCE_IDENTITY")
+  ACCOUNT_ID=$(jq -r '.accountId' <<< "$INSTANCE_IDENTITY")
+  REGION=$(jq -r '.region' <<< "$INSTANCE_IDENTITY")
+  configure_ecr "$ACCOUNT_ID" "$REGION"
   acquire_lock
   create_server_node "$INSTANCE_ID"
   aws servicediscovery register-instance \
