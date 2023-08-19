@@ -127,6 +127,9 @@ exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
   PRIVATE_IP=$(jq -r '.privateIp' <<< "$INSTANCE_IDENTITY")
   ACCOUNT_ID=$(jq -r '.accountId' <<< "$INSTANCE_IDENTITY")
   REGION=$(jq -r '.region' <<< "$INSTANCE_IDENTITY")
+  mkdir -p /etc/sysctl.d
+  echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.d/99-ip-forward.conf
+  sysctl --system
   configure_ecr "$ACCOUNT_ID" "$REGION"
   setup_node_manager_pod
   acquire_lock
