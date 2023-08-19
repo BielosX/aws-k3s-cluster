@@ -35,6 +35,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: node-manager
+  namespace: kube-system
 spec:
   containers:
     - name: node-manager

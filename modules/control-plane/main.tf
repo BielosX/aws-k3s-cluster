@@ -42,6 +42,12 @@ data "aws_iam_policy_document" "instance-role-policy" {
     resources = ["*"]
   }
   statement {
+    sid = "DescribeInstances"
+    effect = "Allow"
+    actions = ["ec2:DescribeInstances"]
+    resources = ["*"]
+  }
+  statement {
     sid = "ManageSSMParams"
     effect = "Allow"
     actions = [

@@ -30,7 +30,7 @@ public class DynamoDbLockService {
                 LOCK_ATTRIBUTE,
                 AttributeValue.fromS(LOCK_ID),
                 "timestamp",
-                AttributeValue.fromN(timestamp.toString()),
+                AttributeValue.fromN(String.valueOf(timestamp.getEpochSecond())),
                 "expirationTime",
                 AttributeValue.fromN(String.valueOf(expirationTime.getEpochSecond()))))
         .build();
