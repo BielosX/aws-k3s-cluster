@@ -20,6 +20,11 @@ variable "kubernetes-service-cidr" {
   default = "10.43.0.0/16"
 }
 
+variable "kubernetes-cluster-dns" {
+  type = string
+  default = "10.43.0.10"
+}
+
 variable "node-manager-image" {
   type = string
 }

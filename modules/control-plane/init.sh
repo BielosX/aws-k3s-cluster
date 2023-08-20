@@ -3,6 +3,7 @@ LOCK_TABLE="${lock_table}"
 SERVICE_ID="${service_id}"
 POD_CIDR="${kubernetes_pod_cidr}"
 SERVICE_CIDR="${kubernetes_service_cidr}"
+CLUSTER_DNS="${kubernetes_cluster_dns}"
 NODE_MANAGER_IMAGE="${node_manager_image}"
 
 function configure_ecr() {
@@ -75,6 +76,7 @@ function release_lock() {
 
 function create_server_node() {
   instance_id="$1"
+  node_ip="$2"
   node_label="aws/instance-id=$instance_id"
   taint="node-role.kubernetes.io/control-plane:NoSchedule"
   domain="nodes.plane.local"
@@ -84,9 +86,15 @@ function create_server_node() {
   if [ "$length" -eq 0 ]; then
     echo "Token not fount, starting as first node"
     curl -sfL https://get.k3s.io | sh -s - server \
-      --cluster-init --tls-san "$domain" \
-      --node-label "$node_label" --node-taint "$taint" \
-      --cluster-cidr "$POD_CIDR" --service-cidr "$SERVICE_CIDR"
+      --cluster-init \
+      --tls-san "$domain" \
+      --node-label "$node_label" \
+      --node-taint "$taint" \
+      --cluster-cidr "$POD_CIDR" \
+      --service-cidr "$SERVICE_CIDR" \
+      --cluster-dns "$CLUSTER_DNS" \
+      --node-ip "$node_ip" \
+      --prefer-bundled-bin
     token=$(cat /var/lib/rancher/k3s/server/node-token)
     aws ssm put-parameter --name "/control-plane/token" \
       --value "$token" \
@@ -100,6 +108,7 @@ function create_server_node() {
       --type "SecureString"
     echo "Token stored in SSM as /control-plane/token"
     echo "Kubeconfig stored in SSM as /control-plane/kubeconfig"
+    echo "FIRST CP INITIALIZED"
   else
     echo "Token found, joining control-plane"
     server_ip=$(aws servicediscovery list-instances \
@@ -112,7 +121,11 @@ function create_server_node() {
       --tls-san "$domain" \
       --node-label "$node_label" \
       --node-taint "$taint" \
-      --cluster-cidr "$POD_CIDR" --service-cidr "$SERVICE_CIDR"
+      --cluster-cidr "$POD_CIDR" \
+      --service-cidr "$SERVICE_CIDR" \
+      --cluster-dns "$CLUSTER_DNS" \
+      --node-ip "$node_ip" \
+      --prefer-bundled-bin
   fi
 }
 
@@ -120,6 +133,9 @@ exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
   echo "Install K3S"
   yum -y install container-selinux
   yum -y install https://github.com/k3s-io/k3s-selinux/releases/download/v1.4.stable.1/k3s-selinux-1.4-1.el8.noarch.rpm
+  yum -y install cronie
+  systemctl enable cronie.service
+  systemctl start cronie.service
   TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
   URL="http://169.254.169.254/latest/dynamic/instance-identity/document"
   INSTANCE_IDENTITY=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -v "$URL")
@@ -129,11 +145,12 @@ exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
   REGION=$(jq -r '.region' <<< "$INSTANCE_IDENTITY")
   mkdir -p /etc/sysctl.d
   echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.d/99-ip-forward.conf
+  echo "net.bridge.bridge-nf-call-iptables = 1" >> /etc/sysctl.d/99-bridge-iptables.conf
   sysctl --system
   configure_ecr "$ACCOUNT_ID" "$REGION"
   setup_node_manager_pod
   acquire_lock
-  create_server_node "$INSTANCE_ID"
+  create_server_node "$INSTANCE_ID" "$PRIVATE_IP"
   aws servicediscovery register-instance \
     --service-id "$SERVICE_ID" \
     --instance-id "$INSTANCE_ID" \

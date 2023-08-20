@@ -52,6 +52,7 @@ public class DynamoDbLockService {
   }
 
   public void unlock() {
+    log.info("Unlocking");
     DeleteItemRequest request =
         DeleteItemRequest.builder()
             .tableName(lockTable)

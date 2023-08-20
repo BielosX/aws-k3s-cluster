@@ -30,5 +30,6 @@ module "control-plane" {
   ami = "ami-0bd2107e291d3cac5"
   kubernetes-pod-cidr = "172.16.0.0/16"
   kubernetes-service-cidr = "172.17.0.0/16"
+  kubernetes-cluster-dns = "172.17.0.10"
   node-manager-image = var.node-manager-image
 }

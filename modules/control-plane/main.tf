@@ -36,6 +36,12 @@ data "aws_iam_policy_document" "instance-role-policy" {
     resources = [module.cloud-map.control-plane-nodes-service-arn]
   }
   statement {
+    sid = "DeregisterInstance"
+    effect = "Allow"
+    actions = ["servicediscovery:DeregisterInstance"]
+    resources = [module.cloud-map.control-plane-nodes-service-arn]
+  }
+  statement {
     sid = "ListInstances"
     effect = "Allow"
     actions = ["servicediscovery:ListInstances"]
@@ -85,6 +91,7 @@ module "asg" {
     kubernetes_pod_cidr = var.kubernetes-pod-cidr
     kubernetes_service_cidr = var.kubernetes-service-cidr
     node_manager_image = var.node-manager-image
+    kubernetes_cluster_dns = var.kubernetes-cluster-dns
   })
   instance-managed-policies = [
     "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy",

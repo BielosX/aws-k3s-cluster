@@ -132,8 +132,8 @@ resource "aws_security_group_rule" "control-plane-flannel-vxlan-self" {
   for_each = toset(["ingress", "egress"])
   security_group_id = aws_security_group.control-plane-sg.id
   self = true
-  from_port = local.kubernetes-port
-  to_port = local.kubernetes-port
+  from_port = local.flannel-vxlan
+  to_port = local.flannel-vxlan
   protocol = "udp"
   type = each.value
 }
@@ -142,8 +142,8 @@ resource "aws_security_group_rule" "control-plane-flannel-vxlan-node" {
   for_each = toset(["ingress", "egress"])
   security_group_id = aws_security_group.control-plane-sg.id
   source_security_group_id = aws_security_group.node-sg.id
-  from_port = local.kubernetes-port
-  to_port = local.kubernetes-port
+  from_port = local.flannel-vxlan
+  to_port = local.flannel-vxlan
   protocol = "udp"
   type = each.value
 }

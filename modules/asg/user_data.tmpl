@@ -21,11 +21,8 @@ write_files:
 packages:
     - amazon-cloudwatch-agent
     - jq
-    - cronie
 runcmd:
     - ${cw-agent-dir}/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:${cw-agent-conf-file}
-    - systemctl enable cronie.service
-    - systemctl start cronie.service
 
 --//
 Content-Type: text/x-shellscript; charset="us-ascii"
