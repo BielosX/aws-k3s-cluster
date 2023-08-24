@@ -205,7 +205,25 @@ function destroy() {
   aws ssm delete-parameters --names "/control-plane/kubeconfig"
 }
 
+function tunnel_control_plane() {
+  bastion_id=$(aws ec2 describe-instances \
+    --filters "Name=tag:Name,Values=bastion-host" "Name=instance-state-name,Values=running" \
+    | jq -r '.Reservations[0].Instances[0].InstanceId')
+  aws ssm start-session \
+      --target "$bastion_id" \
+      --document-name AWS-StartPortForwardingSessionToRemoteHost \
+      --parameters '{"host":["nodes.plane.local"],"portNumber":["6443"], "localPortNumber":["6443"]}'
+}
+
+function local_kubeconfig() {
+  param=$(aws ssm get-parameter --name "/control-plane/kubeconfig" --with-decryption | jq -r '.Parameter.Value')
+  mkdir -p ~/.kube
+  echo "${param//nodes.plane.local/localhost}" > ~/.kube/config
+}
+
 case "$1" in
   "deploy") deploy ;;
   "destroy") destroy ;;
+  "tunnel-cp") tunnel_control_plane ;;
+  "local-kubeconfig") local_kubeconfig ;;
 esac

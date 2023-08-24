@@ -94,7 +94,8 @@ function create_server_node() {
       --service-cidr "$SERVICE_CIDR" \
       --cluster-dns "$CLUSTER_DNS" \
       --node-ip "$node_ip" \
-      --prefer-bundled-bin
+      --prefer-bundled-bin \
+      --kube-apiserver-arg="--enable-admission-plugins=MutatingAdmissionWebhook"
     token=$(cat /var/lib/rancher/k3s/server/node-token)
     aws ssm put-parameter --name "/control-plane/token" \
       --value "$token" \
@@ -125,7 +126,8 @@ function create_server_node() {
       --service-cidr "$SERVICE_CIDR" \
       --cluster-dns "$CLUSTER_DNS" \
       --node-ip "$node_ip" \
-      --prefer-bundled-bin
+      --prefer-bundled-bin \
+      --kube-apiserver-arg="--enable-admission-plugins=MutatingAdmissionWebhook"
   fi
 }
 
