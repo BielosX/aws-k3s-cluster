@@ -71,6 +71,10 @@ function get_latest_node_manager() {
 }
 
 function deploy_control_plane() {
+  pushd iam-provider-lambda || exit
+  ./gradlew clean build shadowJar spotlessJavaCheck
+  jar_path=$(readlink -f build/libs/iam-provider-lambda-all.jar)
+  popd || exit
   pushd live/control-plane || exit
   get_exports
   get_backend_bucket "$exports"
@@ -80,7 +84,9 @@ function deploy_control_plane() {
   terraform init -backend-config="bucket=$backend_bucket_name" \
     -backend-config="dynamodb_table=$lock_table_name" || exit
   terraform apply -auto-approve \
-    -var "vpc-state-bucket=$backend_bucket_name" -var "node-manager-image=$latest_node_manager" || exit
+    -var "vpc-state-bucket=$backend_bucket_name" \
+    -var "node-manager-image=$latest_node_manager" \
+    -var "iam-role-provider-lambda-jar=$jar_path" || exit
   popd || exit
 }
 
@@ -149,8 +155,12 @@ function destroy_control_plane() {
   pushd live/control-plane || exit
   get_exports
   get_backend_bucket "$exports"
+  temp_file=$(mktemp)
   terraform destroy -auto-approve \
-    -var "vpc-state-bucket=$backend_bucket_name" -var "node-manager-image=temp" || exit
+    -var "vpc-state-bucket=$backend_bucket_name" \
+    -var "node-manager-image=temp" \
+    -var "iam-role-provider-lambda-jar=$temp_file"|| exit
+  rm "$temp_file"
   popd || exit
 }
 

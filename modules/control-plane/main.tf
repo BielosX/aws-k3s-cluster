@@ -66,6 +66,11 @@ data "aws_iam_policy_document" "instance-role-policy" {
   }
 }
 
+module "iam-role-provider" {
+  source = "./iam-role-provider-lambda"
+  lambda-file-path = var.iam-role-provider-lambda-jar
+}
+
 module "asg" {
   source = "../asg"
   ami = var.ami
@@ -92,6 +97,7 @@ module "asg" {
     kubernetes_service_cidr = var.kubernetes-service-cidr
     node_manager_image = var.node-manager-image
     kubernetes_cluster_dns = var.kubernetes-cluster-dns
+    webhook_url = module.iam-role-provider.stage-url
   })
   instance-managed-policies = [
     "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy",
@@ -105,6 +111,13 @@ module "asg" {
   security-group-ids = [module.security-group.control-plane-sg-id]
   subnet-ids = var.subnet-ids
   metadata-hop-limit = 2
+  write-files = [
+    {
+      permissions = "444"
+      destination = "/opt/webhook.yaml"
+      contentFile = "${path.module}/webhook.yaml"
+    }
+  ]
   string-write-files = [
     {
       permissions = "777"

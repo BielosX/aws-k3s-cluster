@@ -28,3 +28,7 @@ variable "kubernetes-cluster-dns" {
 variable "node-manager-image" {
   type = string
 }
+
+variable "iam-role-provider-lambda-jar" {
+  type = string
+}

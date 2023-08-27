@@ -32,4 +32,5 @@ module "control-plane" {
   kubernetes-service-cidr = "172.17.0.0/16"
   kubernetes-cluster-dns = "172.17.0.10"
   node-manager-image = var.node-manager-image
+  iam-role-provider-lambda-jar = var.iam-role-provider-lambda-jar
 }

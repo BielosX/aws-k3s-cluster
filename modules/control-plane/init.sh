@@ -5,6 +5,7 @@ POD_CIDR="${kubernetes_pod_cidr}"
 SERVICE_CIDR="${kubernetes_service_cidr}"
 CLUSTER_DNS="${kubernetes_cluster_dns}"
 NODE_MANAGER_IMAGE="${node_manager_image}"
+WEBHOOK_URL="${webhook_url}"
 
 function configure_ecr() {
   accountId="$1"
@@ -47,6 +48,12 @@ spec:
         - name: "LOCK_TABLE"
           value: "$LOCK_TABLE"
 EOF
+}
+
+# https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers
+function setup_webhook() {
+  export LAMBDA_URL="$WEBHOOK_URL"
+  envsubst < /opt/webhook.yaml | KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl apply -f -
 }
 
 function acquire_lock() {
@@ -109,6 +116,8 @@ function create_server_node() {
       --type "SecureString"
     echo "Token stored in SSM as /control-plane/token"
     echo "Kubeconfig stored in SSM as /control-plane/kubeconfig"
+    echo "Setup webhook"
+    setup_webhook
     echo "FIRST CP INITIALIZED"
   else
     echo "Token found, joining control-plane"

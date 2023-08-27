@@ -5,3 +5,7 @@ variable "vpc-state-bucket" {
 variable "node-manager-image" {
   type = string
 }
+
+variable "iam-role-provider-lambda-jar" {
+  type = string
+}

@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: aws-iam-role-provider
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  namespace: aws-iam-role-provider
+  name: aws-iam-role-provider-webhook
+webhooks:
+  - admissionReviewVersions: ['v1']
+    rules:
+      - operations: ['CREATE', 'UPDATE', 'DELETE']
+        apiGroups: ['*']
+        apiVersions: ['*']
+        resources: ['deployments', 'pods']
+        scope: '*'
+    failurePolicy: Ignore
+    clientConfig:
+      url: "${LAMBDA_URL}"
+    name: aws-iam-role-provider.provider.com
+    sideEffects: NoneOnDryRun
