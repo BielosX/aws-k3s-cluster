@@ -72,7 +72,7 @@ function get_latest_node_manager() {
 
 function deploy_control_plane() {
   pushd iam-provider-lambda || exit
-  ./gradlew clean build shadowJar spotlessJavaCheck
+  ./gradlew clean build shadowJar spotlessJavaCheck || exit
   jar_path=$(readlink -f build/libs/iam-provider-lambda-all.jar)
   popd || exit
   pushd live/control-plane || exit

@@ -6,6 +6,7 @@ SERVICE_CIDR="${kubernetes_service_cidr}"
 CLUSTER_DNS="${kubernetes_cluster_dns}"
 NODE_MANAGER_IMAGE="${node_manager_image}"
 WEBHOOK_URL="${webhook_url}"
+WEBHOOK_TOKEN_PARAM="${webhook_token_param}"
 
 function configure_ecr() {
   accountId="$1"
@@ -81,12 +82,22 @@ function release_lock() {
   echo "Lock released"
 }
 
+function setup_webhook_config() {
+  echo "Fetching webhook token from SSM param $WEBHOOK_TOKEN_PARAM"
+  token=$(aws ssm get-parameter --with-decryption --name "$WEBHOOK_TOKEN_PARAM" \
+    | jq -r '.Parameter.Value')
+  export WEBHOOK_TOKEN="$token"
+  envsubst < /opt/webhook-config.yaml > /opt/webhook-config-user-password.yaml
+}
+
 function create_server_node() {
   instance_id="$1"
   node_ip="$2"
   node_label="aws/instance-id=$instance_id"
   taint="node-role.kubernetes.io/control-plane:NoSchedule"
   domain="nodes.plane.local"
+  api_server_admission_config="--admission-control-config-file=/opt/admission-config.yaml"
+  api_server_admission_enable="--enable-admission-plugins=MutatingAdmissionWebhook"
   parameters=$(aws ssm get-parameters --names "/control-plane/token" \
     --with-decryption)
   length=$(jq -r '.Parameters | length' <<< "$parameters")
@@ -102,7 +113,9 @@ function create_server_node() {
       --cluster-dns "$CLUSTER_DNS" \
       --node-ip "$node_ip" \
       --prefer-bundled-bin \
-      --kube-apiserver-arg="--enable-admission-plugins=MutatingAdmissionWebhook"
+      --selinux \
+      --kube-apiserver-arg="$api_server_admission_config" \
+      --kube-apiserver-arg="$api_server_admission_enable"
     token=$(cat /var/lib/rancher/k3s/server/node-token)
     aws ssm put-parameter --name "/control-plane/token" \
       --value "$token" \
@@ -136,7 +149,9 @@ function create_server_node() {
       --cluster-dns "$CLUSTER_DNS" \
       --node-ip "$node_ip" \
       --prefer-bundled-bin \
-      --kube-apiserver-arg="--enable-admission-plugins=MutatingAdmissionWebhook"
+      --selinux \
+      --kube-apiserver-arg="$api_server_admission_config" \
+      --kube-apiserver-arg="$api_server_admission_enable"
   fi
 }
 
@@ -158,6 +173,7 @@ exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
   echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.d/99-ip-forward.conf
   echo "net.bridge.bridge-nf-call-iptables = 1" >> /etc/sysctl.d/99-bridge-iptables.conf
   sysctl --system
+  setup_webhook_config
   configure_ecr "$ACCOUNT_ID" "$REGION"
   setup_node_manager_pod
   acquire_lock

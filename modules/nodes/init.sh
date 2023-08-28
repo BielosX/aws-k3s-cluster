@@ -48,5 +48,6 @@ exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
     --server https://nodes.plane.local:6443 \
     --node-label "aws/instance-id=$INSTANCE_ID" \
     --node-ip "$PRIVATE_IP" \
+    --selinux \
     --prefer-bundled-bin
   echo "Agent initiated"

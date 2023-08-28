@@ -98,6 +98,7 @@ module "asg" {
     node_manager_image = var.node-manager-image
     kubernetes_cluster_dns = var.kubernetes-cluster-dns
     webhook_url = module.iam-role-provider.stage-url
+    webhook_token_param = module.iam-role-provider.token-parameter
   })
   instance-managed-policies = [
     "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy",
@@ -116,6 +117,16 @@ module "asg" {
       permissions = "444"
       destination = "/opt/webhook.yaml"
       contentFile = "${path.module}/webhook.yaml"
+    },
+    {
+      permissions = "444"
+      destination = "/opt/admission-config.yaml"
+      contentFile = "${path.module}/admission-config.yaml"
+    },
+    {
+      permissions = "444"
+      destination = "/opt/webhook-config.yaml"
+      contentFile = "${path.module}/webhook-config.yaml"
     }
   ]
   string-write-files = [

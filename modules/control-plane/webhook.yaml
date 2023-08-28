@@ -20,4 +20,5 @@ webhooks:
     clientConfig:
       url: "${LAMBDA_URL}"
     name: aws-iam-role-provider.provider.com
+    timeoutSeconds: 20
     sideEffects: NoneOnDryRun

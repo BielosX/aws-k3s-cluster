@@ -9,10 +9,22 @@ data "aws_iam_policy_document" "assume-role-policy" {
   }
 }
 
+resource "random_password" "password" {
+  length = 32
+  special = false
+}
+
+resource "aws_ssm_parameter" "webhook-token" {
+  name = "/control-plane/webhook-token"
+  type = "SecureString"
+  value = random_password.password.result
+}
+
 resource "aws_iam_role" "role" {
   assume_role_policy = data.aws_iam_policy_document.assume-role-policy.json
   managed_policy_arns = [
-    "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+    "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
+    "arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess"
   ]
 }
 
@@ -25,6 +37,11 @@ resource "aws_lambda_function" "lambda" {
   handler = "Handler::handleRequest"
   filename = var.lambda-file-path
   source_code_hash = filebase64sha256(var.lambda-file-path)
+  environment {
+    variables = {
+      TOKEN_PARAM = aws_ssm_parameter.webhook-token.id
+    }
+  }
 }
 
 locals {
