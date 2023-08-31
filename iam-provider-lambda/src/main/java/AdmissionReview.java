@@ -11,10 +11,11 @@ public record AdmissionReview(String apiVersion, String kind, Request request, R
       Resource resource,
       String name,
       String namespace,
-      KubernetesOperation operation) {}
+      KubernetesOperation operation,
+      KubernetesPod object) {}
 
   @Builder
-  public record Response(String uid, boolean allowed) {}
+  public record Response(String uid, boolean allowed, String patchType, String patch) {}
 
   public static AdmissionReview response(Response response) {
     return new AdmissionReview(API_VERSION, KIND, null, response);

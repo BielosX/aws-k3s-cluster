@@ -14,7 +14,7 @@ webhooks:
       - operations: ['CREATE', 'UPDATE', 'DELETE']
         apiGroups: ['*']
         apiVersions: ['*']
-        resources: ['deployments', 'pods']
+        resources: ['pods']
         scope: '*'
     failurePolicy: Ignore
     clientConfig:

@@ -3,9 +3,12 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPResponse;
 import com.google.gson.Gson;
+import java.util.Base64;
+import java.util.List;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.IntStream;
 import lombok.extern.slf4j.Slf4j;
 import software.amazon.awssdk.services.ssm.SsmClient;
 import software.amazon.awssdk.services.ssm.model.GetParameterRequest;
@@ -18,6 +21,8 @@ public class Handler implements RequestHandler<APIGatewayV2HTTPEvent, APIGateway
   private static final Pattern BEARER_PATTERN = Pattern.compile("Bearer\\s+(\\w+)");
   private static final String AUTHORIZATION = "Authorization";
   private static final String TOKEN_PARAM = "TOKEN_PARAM";
+  private static final String AWS_ROLE_ARN = "aws/roleArn";
+  private static final String PATCH_TYPE = "JSONPatch";
   private final Gson gson = new Gson();
   private final SsmClient ssmClient = SsmClient.create();
 
@@ -30,6 +35,51 @@ public class Handler implements RequestHandler<APIGatewayV2HTTPEvent, APIGateway
       GetParameterResponse response = ssmClient.getParameter(request);
       this.token = response.parameter().value();
     }
+  }
+
+  private APIGatewayV2HTTPResponse success(AdmissionReview response) {
+    return APIGatewayV2HTTPResponse.builder()
+        .withStatusCode(200)
+        .withBody(gson.toJson(response))
+        .build();
+  }
+
+  private AdmissionReview pass(AdmissionReview request) {
+    return AdmissionReview.response(
+        AdmissionReview.Response.builder().allowed(true).uid(request.request().uid()).build());
+  }
+
+  private APIGatewayV2HTTPResponse handlePodWithRole(AdmissionReview review, String roleArn) {
+    log.info("AWS Role ARN: {}", roleArn);
+    int containers = review.request().object().spec().containers().size();
+    PodEnvSpec envSpec = new PodEnvSpec("TEST_ENV", "Hello");
+    List<PodEnvSpec> envSpecs = List.of(envSpec);
+    List<JSONPatchRecord> records =
+        IntStream.range(0, containers)
+            .mapToObj(
+                idx ->
+                    new JSONPatchRecord(
+                        "add", String.format("/spec/containers/%d/env", idx), envSpecs))
+            .toList();
+    String patchJson = gson.toJson(records);
+    log.info("Patch json: {}", patchJson);
+    String patch = Base64.getEncoder().encodeToString(patchJson.getBytes());
+    AdmissionReview responseReview =
+        AdmissionReview.response(
+            AdmissionReview.Response.builder()
+                .uid(review.request().uid())
+                .allowed(true)
+                .patchType(PATCH_TYPE)
+                .patch(patch)
+                .build());
+    return success(responseReview);
+  }
+
+  private APIGatewayV2HTTPResponse handlePods(AdmissionReview review) {
+    return Optional.ofNullable(review.request().object().metadata().annotations())
+        .flatMap(annotations -> Optional.ofNullable(annotations.get(AWS_ROLE_ARN)))
+        .map(roleArn -> handlePodWithRole(review, roleArn))
+        .orElse(success(pass(review)));
   }
 
   @Override
@@ -51,12 +101,6 @@ public class Handler implements RequestHandler<APIGatewayV2HTTPEvent, APIGateway
     }
     AdmissionReview review = gson.fromJson(input.getBody(), AdmissionReview.class);
     log.info("Received AdmissionReview: {}", review);
-    AdmissionReview reviewResponse =
-        AdmissionReview.response(
-            AdmissionReview.Response.builder().allowed(true).uid(review.request().uid()).build());
-    return APIGatewayV2HTTPResponse.builder()
-        .withStatusCode(200)
-        .withBody(gson.toJson(reviewResponse))
-        .build();
+    return handlePods(review);
   }
 }
