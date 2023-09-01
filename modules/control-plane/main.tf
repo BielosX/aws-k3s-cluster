@@ -69,6 +69,8 @@ data "aws_iam_policy_document" "instance-role-policy" {
 module "iam-role-provider" {
   source = "./iam-role-provider-lambda"
   lambda-file-path = var.iam-role-provider-lambda-jar
+  subnets = var.subnet-ids
+  security-group-id = module.security-group.lambda-sg-id
 }
 
 module "asg" {
@@ -139,4 +141,9 @@ module "asg" {
       })
     }
   ]
+}
+
+module "examples" {
+  source = "../examples"
+  lambda-role-arn = module.iam-role-provider.role-arn
 }

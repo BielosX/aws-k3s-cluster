@@ -20,12 +20,32 @@ resource "aws_ssm_parameter" "webhook-token" {
   value = random_password.password.result
 }
 
+data "aws_iam_policy_document" "lambda-policy" {
+  statement {
+    effect = "Allow"
+    actions = ["sts:AssumeRole"]
+    resources = ["*"]
+  }
+}
+
 resource "aws_iam_role" "role" {
+  name = "iam-provider-lambda-role"
   assume_role_policy = data.aws_iam_policy_document.assume-role-policy.json
   managed_policy_arns = [
     "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
-    "arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess"
+    "arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess",
+    "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
   ]
+  inline_policy {
+    name = "lambda-inline-policy"
+    policy = data.aws_iam_policy_document.lambda-policy.json
+  }
+}
+
+data "aws_region" "current" {}
+
+locals {
+  region = data.aws_region.current.name
 }
 
 resource "aws_lambda_function" "lambda" {
@@ -40,7 +60,12 @@ resource "aws_lambda_function" "lambda" {
   environment {
     variables = {
       TOKEN_PARAM = aws_ssm_parameter.webhook-token.id
+      REGION = local.region
     }
+  }
+  vpc_config {
+    security_group_ids = [var.security-group-id]
+    subnet_ids = var.subnets
   }
 }
 

@@ -147,3 +147,19 @@ resource "aws_security_group_rule" "control-plane-flannel-vxlan-node" {
   protocol = "udp"
   type = each.value
 }
+
+resource "aws_security_group" "lambda-security-group" {
+  vpc_id = var.vpc-id
+  egress {
+    cidr_blocks = ["0.0.0.0/0"]
+    from_port = 443
+    to_port = 443
+    protocol = "tcp"
+  }
+  egress {
+    security_groups = [aws_security_group.control-plane-sg.id]
+    from_port = local.kubernetes-port
+    to_port = local.kubernetes-port
+    protocol = "tcp"
+  }
+}

@@ -5,3 +5,7 @@ output "stage-url" {
 output "token-parameter" {
   value = aws_ssm_parameter.webhook-token.id
 }
+
+output "role-arn" {
+  value = aws_iam_role.role.arn
+}
